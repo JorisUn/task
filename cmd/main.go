@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ type Task struct{
 }
 
 func main(){
+    filePath := "../data.csv"
 
     /** Handle comand-line arguments **/
     cmdArgs := os.Args
@@ -22,12 +24,11 @@ func main(){
     }
 
     /** Reading data from a file **/
-    file, e := os.Open("../data.csv")
+    file, e := os.Open(filePath)
     handle(e)
     defer file.Close()
     reader := csv.NewReader(file)
-    dataFormat, _ :=reader.Read()
-    _ = dataFormat
+    dataFormat, _ :=reader.Read() 
     lines, e := reader.ReadAll()
     handle(e)
     TaskArr := readToArr(lines)
@@ -56,8 +57,36 @@ func main(){
             } else {
                 fmt.Println("All tasks have been completed.")
             }
-        }
+        case "add":
+            scanner := bufio.NewScanner(os.Stdin)
+            fmt.Println("Enter task name:")
+            scanner.Scan()
+            name := scanner.Text()
+            handle(scanner.Err())
+            fmt.Println("Add a description:")
+            scanner.Scan()
+            desc := scanner.Text()
+            handle(scanner.Err())
+            TaskArr = append(TaskArr, *NewTask(string(name), string(desc), false))
+            fmt.Println("Task successfully added.")
+        default:
+            return
+        } 
+    } else {
+        return;
     }
+    //handle(os.Truncate(filePath, 0))
+    
+    // os.Create() clears the file
+    file, _ = os.Create(filePath)
+    defer file.Close()
+    writer := csv.NewWriter(file)
+    writer.Write(dataFormat)
+    for _, t := range TaskArr {
+        writer.Write(t.ToStringArray())
+    }
+    writer.Flush()
+    handle(writer.Error())
 }
 
 // Task contructor
@@ -66,6 +95,10 @@ func NewTask(name, description string, completed bool) *Task{
     t.description = description
     t.completed = completed
     return &t
+}
+
+func (t Task)ToStringArray() []string {
+    return []string{t.name, t.description, strconv.FormatBool(t.completed)}
 }
 
 func handle(e error){
